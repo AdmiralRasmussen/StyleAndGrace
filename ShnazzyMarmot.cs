@@ -27,11 +27,11 @@ namespace TizzleTazzle {
                     while (diff < -180) diff += 360;
 
                     if (diff > 0) {
-                        base.TurnGunRight(diff + 10 + Math.Sqrt(this.Time - this.LastSighting.Value));
+                        base.TurnGunRight(diff + 10 + (this.Time - this.LastSighting.Value) / 2);
                     }
 
                     if (diff < 0) {
-                        base.TurnGunLeft(-diff + 10 + Math.Sqrt(this.Time - this.LastSighting.Value));
+                        base.TurnGunLeft(-diff + 10 + (this.Time - this.LastSighting.Value) / 2);
                     }
                 }
             }
@@ -48,9 +48,15 @@ namespace TizzleTazzle {
 
             base.Out.WriteLine("{0} saw at {1}, {2}", this.LastSighting, this.LastX, this.LastY);
 
-            if (!this.Safety) {
-                base.Fire(.5);
-            }
+            PoweredShot();
+        }
+
+        private void PoweredShot() {
+            if (this.Safety) return;
+
+            double dist = Math.Sqrt(Math.Pow(this.LastX - this.X, 2) + Math.Pow(this.LastY - this.Y, 2));
+            double power = 300 / dist;
+            base.Fire(power);
         }
 
         private static double DegreesToRadians(double degrees) {
