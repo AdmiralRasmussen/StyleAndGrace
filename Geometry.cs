@@ -21,8 +21,9 @@ namespace TizzleTazzle {
         }
 
         public static PointF ShiftBy(PointF point, double heading, double distance, RectangleF bounds) {
-            double targetX = Geometry.Clamp(point.X + distance * Math.Sin(heading), bounds.Left, bounds.Right);
-            double targetY = Geometry.Clamp(point.Y + distance * Math.Cos(heading), bounds.Top, bounds.Bottom);
+            double headingRadians = DegreesToRadians(heading);
+            double targetX = Geometry.Clamp(point.X + distance * Math.Sin(headingRadians), bounds.Left, bounds.Right);
+            double targetY = Geometry.Clamp(point.Y + distance * Math.Cos(headingRadians), bounds.Top, bounds.Bottom);
 
             return Geometry.MakePoint(targetX, targetY);
         }

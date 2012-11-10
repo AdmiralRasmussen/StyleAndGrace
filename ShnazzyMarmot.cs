@@ -34,6 +34,8 @@ namespace TizzleTazzle {
             return Geometry.RadiansToDegrees(radians);
         }
 
+        private PointF? AheadPoint = null;
+        private PointF? BehindPoint = null;
         private void RunBody() {
             const double DRIVE_DISTANCE = 90;
 
@@ -46,8 +48,12 @@ namespace TizzleTazzle {
 
             PointF ahead = Geometry.ShiftBy(this.Location, this.Heading, DRIVE_DISTANCE, bounds);
             PointF behind = Geometry.ShiftBy(this.Location, this.Heading, -DRIVE_DISTANCE, bounds);
+            this.AheadPoint = ahead;
+            this.BehindPoint = behind;
 
-            bool aheadCloser = Geometry.Distance(ahead, center) <= Geometry.Distance(behind, center);
+            double distanceAhead = Geometry.Distance(ahead, center);
+            double distanceBehind = Geometry.Distance(behind, center);
+            bool aheadCloser = distanceAhead <= distanceBehind;
 
             if (aheadCloser) {
                 base.Ahead(DRIVE_DISTANCE);
@@ -57,10 +63,10 @@ namespace TizzleTazzle {
             
             this.LocationHistory.Add(this.Location);
 
-            this.TurnTo(this.GetHeadingTo(this.LastFoeState.Value.Location) + 90 + rng.Next(-20, 21));
+            int variance = (int)(this.DistanceTo(bounds.GetCenter()) * 0.2);
+            this.TurnTo(this.GetHeadingTo(this.LastFoeState.Value.Location) + 90 + rng.Next(-variance, variance + 1));
 
             this.MakeRefinedShot();
-            this.FiredOnLastSighting = true;
         }
 
         private void MakeRefinedShot() {
@@ -87,6 +93,7 @@ namespace TizzleTazzle {
             this.LastShotSource = currentLocation;
             this.TurnGunTo(target);
             base.Fire(power);
+            this.FiredOnLastSighting = true;
 
             this.ShotsFired++;
         }
@@ -104,7 +111,7 @@ namespace TizzleTazzle {
 
             double elapsed = this.Time - this.LastFoeState.Value.Turn;
             double traveled = (elapsed + turns) * this.LastFoeState.Value.Velocity;
-            double heading = this.LastFoeState.Value.HeadingRadians;
+            double heading = this.LastFoeState.Value.Heading;
             PointF target = this.LastFoeState.Value.Location;
 
             return Geometry.ShiftBy(target, heading, traveled, this.GetRobotBounds());
@@ -113,7 +120,7 @@ namespace TizzleTazzle {
         private RectangleF GetRobotBounds() {
             return new RectangleF(
                 (float)this.Width / 2, (float)this.Height / 2,
-                (float)(this.BattleFieldWidth - this.Width / 2), (float)(this.BattleFieldHeight - this.Height / 2));
+                (float)(this.BattleFieldWidth - this.Width), (float)(this.BattleFieldHeight - this.Height));
         }
 
         protected void TurnTo(double heading) {
@@ -184,6 +191,10 @@ namespace TizzleTazzle {
             }
             if (this.LastShotTarget.HasValue && this.LastShotSource.HasValue) {
                 graphics.DrawLine(lastShotTargetPen, this.LastShotSource.Value, this.LastShotTarget.Value);
+            }
+            if (this.AheadPoint.HasValue && this.BehindPoint.HasValue) {
+                graphics.DrawLine(Pens.LightBlue, this.Location, this.BehindPoint.Value);
+                graphics.DrawLine(Pens.White, this.Location, this.AheadPoint.Value);
             }
         }
 
