@@ -5,7 +5,7 @@ using Robocode;
 using System.Drawing;
 
 namespace TizzleTazzle {
-    class ShnazzyMarmot : Robot {
+    class ShnazzyMarmot : StylishBot {
         private bool FiredOnLastSighting = true;
         private BotState? LastFoeState = null;
         private PointF? LastShotTarget = null;
@@ -29,15 +29,10 @@ namespace TizzleTazzle {
             }
         }
 
-        protected double GetHeadingTo(PointF target) {
-            double radians = Math.Atan2(target.X - this.X, target.Y - this.Y);
-            return Geometry.RadiansToDegrees(radians);
-        }
-
         private PointF? AheadPoint = null;
         private PointF? BehindPoint = null;
         private void RunBody() {
-            const double DRIVE_DISTANCE = 90;
+            const double DRIVE_DISTANCE = 120;
 
             while (this.FiredOnLastSighting) {
                 base.TurnRadarRight(360);
@@ -73,24 +68,24 @@ namespace TizzleTazzle {
             const double TARGET_ACCURACY = 1;
             const int AIM_TURNS = 2;
 
-            PointF currentLocation = this.Location;
             PointF lastTarget;
             PointF target = this.GetProjectedFoeLocation(AIM_TURNS);
             this.TurnGunTo(target);
 
-            double dist = Geometry.Distance(currentLocation, target);
+            double dist = this.GetDistanceTo(target);
             double power = GetShotPower(dist);
             double shotSpeed = GetShotSpeed(power);
 
             do {
-                double timeToTarget = dist / shotSpeed + AIM_TURNS;
+                int timeToTarget = (int)(dist / shotSpeed) + AIM_TURNS;
 
                 lastTarget = target;
                 target = this.GetProjectedFoeLocation(timeToTarget);
+                dist = this.GetDistanceTo(target);
             } while (Geometry.Distance(target, lastTarget) > TARGET_ACCURACY);
 
             this.LastShotTarget = target;
-            this.LastShotSource = currentLocation;
+            this.LastShotSource = this.Location;
             this.TurnGunTo(target);
             base.Fire(power);
             this.FiredOnLastSighting = true;
@@ -98,70 +93,18 @@ namespace TizzleTazzle {
             this.ShotsFired++;
         }
 
-        private static double GetShotSpeed(double power) {
-            return 20 - (3 * power); // http://robowiki.net/wiki/Robocode/FAQ
-        }
-
         private static double GetShotPower(double dist) {
             return Geometry.Clamp(300 / dist, .1, 3);
         }
 
-        private PointF GetProjectedFoeLocation(double turns) {
+        private PointF GetProjectedFoeLocation(int turns) {
             if (!this.LastFoeState.HasValue) return PointF.Empty;
 
-            double elapsed = this.Time - this.LastFoeState.Value.Turn;
-            double traveled = (elapsed + turns) * this.LastFoeState.Value.Velocity;
-            double heading = this.LastFoeState.Value.Heading;
-            PointF target = this.LastFoeState.Value.Location;
-
-            return Geometry.ShiftBy(target, heading, traveled, this.GetRobotBounds());
-        }
-
-        private RectangleF GetRobotBounds() {
-            return new RectangleF(
-                (float)this.Width / 2, (float)this.Height / 2,
-                (float)(this.BattleFieldWidth - this.Width), (float)(this.BattleFieldHeight - this.Height));
-        }
-
-        protected void TurnTo(double heading) {
-            double turn = Normalize(heading - this.Heading);
-            base.TurnRight(turn);
-        }
-
-        protected void TurnGunTo(PointF target) {
-            double heading = Geometry.RadiansToDegrees(Math.Atan2(target.X - base.X, target.Y - base.Y));
-            this.TurnGunTo(heading);
-        }
-
-        protected void TurnGunTo(double heading) {
-            double turn = Normalize(heading - this.GunHeading);
-            base.TurnGunRight(turn);
-        }
-
-        protected PointF Location {
-            get { return Geometry.MakePoint(this.X, this.Y); }
-        }
-
-        private static double Normalize(double a) {
-            while (a > 180) a -= 360;
-            while (a < -180) a += 360;
-            return a;
-        }
-
-        private double DistanceTo(PointF dest) {
-            return Geometry.Distance(this.Location, dest);
+            return this.LastFoeState.Value.GetProjectedLocation(turns);
         }
 
         public override void OnScannedRobot(ScannedRobotEvent evnt) {
-            var direction = this.HeadingRadians + evnt.BearingRadians;
-
-            this.LastFoeState = new BotState {
-                Location = Geometry.MakePoint(base.X + evnt.Distance * Math.Sin(direction), base.Y + evnt.Distance * Math.Cos(direction)),
-                Heading = evnt.Heading,
-                Velocity = evnt.Velocity,
-                Turn = this.Time,
-            };
-
+            this.LastFoeState = this.GetFoeState(evnt);
             this.FiredOnLastSighting = false;
         }
 
@@ -196,14 +139,6 @@ namespace TizzleTazzle {
                 graphics.DrawLine(Pens.LightBlue, this.Location, this.BehindPoint.Value);
                 graphics.DrawLine(Pens.White, this.Location, this.AheadPoint.Value);
             }
-        }
-
-        protected double RadarHeadingRadians {
-            get { return Geometry.DegreesToRadians(base.RadarHeading); }
-        }
-
-        protected double HeadingRadians {
-            get { return Geometry.DegreesToRadians(base.Heading); }
         }
     }
 }

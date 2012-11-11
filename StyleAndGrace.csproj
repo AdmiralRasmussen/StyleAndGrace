@@ -46,8 +46,11 @@
   <ItemGroup>
     <Compile Include="Geometry.cs" />
     <Compile Include="BotState.cs" />
+    <Compile Include="HeadlessChicken.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShnazzyMarmot.cs" />
+    <Compile Include="StylishBot.cs" />
+    <Compile Include="GrumpyTortoise.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

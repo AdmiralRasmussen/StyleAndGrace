@@ -20,7 +20,7 @@ namespace TizzleTazzle {
             return Math.Min(Math.Max(val, low), high);
         }
 
-        public static PointF ShiftBy(PointF point, double heading, double distance, RectangleF bounds) {
+        public static PointF ShiftBy(this PointF point, double heading, double distance, RectangleF bounds) {
             double headingRadians = DegreesToRadians(heading);
             double targetX = Geometry.Clamp(point.X + distance * Math.Sin(headingRadians), bounds.Left, bounds.Right);
             double targetY = Geometry.Clamp(point.Y + distance * Math.Cos(headingRadians), bounds.Top, bounds.Bottom);
@@ -34,6 +34,12 @@ namespace TizzleTazzle {
 
         public static PointF GetCenter(this RectangleF bounds) {
             return MakePoint((bounds.Right - bounds.Left) / 2, (bounds.Bottom - bounds.Top) / 2);
+        }
+
+        public static RectangleF GetRobotBounds(this Robot bot) {
+            return new RectangleF(
+                (float)bot.Width / 2, (float)bot.Height / 2,
+                (float)(bot.BattleFieldWidth - bot.Width), (float)(bot.BattleFieldHeight - bot.Height));
         }
     }
 }
