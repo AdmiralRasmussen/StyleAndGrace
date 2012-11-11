@@ -22,6 +22,13 @@ namespace TizzleTazzle {
             return this.Location.ShiftBy(this.Heading, traveled, this.Observer.GetRobotBounds());
         }
 
+        public PointF GetProjectedLocation(double turnsInFuture, double velocityOverride) {
+            double elapsed = this.Observer.Time - this.Turn;
+            double traveled = (elapsed + turnsInFuture) * velocityOverride;
+
+            return this.Location.ShiftBy(this.Heading, traveled, this.Observer.GetRobotBounds());
+        }
+
         public long Age { get { return this.Observer.Time - this.Turn; } }
     }
 }

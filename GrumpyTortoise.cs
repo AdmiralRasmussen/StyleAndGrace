@@ -6,7 +6,7 @@ using Robocode;
 using System.Drawing;
 
 namespace TizzleTazzle {
-    class GrumpyTortoise : StylishBot {
+    abstract class GrumpyTortoise : StylishBot {
         private BotState? LastSeenFoe = null;
 
         public override void Run() {

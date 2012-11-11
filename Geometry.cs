@@ -36,6 +36,10 @@ namespace TizzleTazzle {
             return MakePoint((bounds.Right - bounds.Left) / 2, (bounds.Bottom - bounds.Top) / 2);
         }
 
+        public static PointF MidPointWith(this PointF a, PointF b) {
+            return MakePoint((a.X + b.X) / 2, (a.Y + b.Y) / 2);
+        }
+
         public static RectangleF GetRobotBounds(this Robot bot) {
             return new RectangleF(
                 (float)bot.Width / 2, (float)bot.Height / 2,

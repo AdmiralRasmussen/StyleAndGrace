@@ -5,6 +5,11 @@ using Robocode;
 using System.Drawing;
 
 namespace TizzleTazzle {
+    enum TargetStrategy {
+        CurrentVelocity,
+        PeggedVelocity,
+    }
+
     class ShnazzyMarmot : StylishBot {
         private bool FiredOnLastSighting = true;
         private BotState? LastFoeState = null;
@@ -14,18 +19,20 @@ namespace TizzleTazzle {
         private int ShotsFired = 0;
         private int ShotsHit = 0;
         private Random rng = new Random();
+        private Dictionary<Bullet, TargetStrategy> BulletStrategies = new Dictionary<Bullet, TargetStrategy>();
+        private TargetStrategy CurrentStrategy = TargetStrategy.PeggedVelocity;
 
         public override void Run() {
             this.SetColors(Color.Pink, Color.CornflowerBlue, Color.LimeGreen);
             this.LocationHistory = new List<PointF>();
 
             while (true) {
-                try {
+                 try {
                     RunBody();
-                } catch (Exception e) {
-                    this.Out.WriteLine(e.ToString());
-                    throw;
-                }
+                 } catch (Exception e) {
+                     this.Out.WriteLine(e.ToString());
+                     throw;
+                 }
             }
         }
 
@@ -76,18 +83,20 @@ namespace TizzleTazzle {
             double power = GetShotPower(dist);
             double shotSpeed = GetShotSpeed(power);
 
+            int iterations = 0;
             do {
                 int timeToTarget = (int)(dist / shotSpeed) + AIM_TURNS;
 
                 lastTarget = target;
                 target = this.GetProjectedFoeLocation(timeToTarget);
                 dist = this.GetDistanceTo(target);
-            } while (Geometry.Distance(target, lastTarget) > TARGET_ACCURACY);
+            } while (Geometry.Distance(target, lastTarget) > TARGET_ACCURACY && ++iterations < 10);
 
             this.LastShotTarget = target;
             this.LastShotSource = this.Location;
             this.TurnGunTo(target);
-            base.Fire(power);
+            var bullet = base.FireBullet(power);
+            this.BulletStrategies[bullet] = this.CurrentStrategy;
             this.FiredOnLastSighting = true;
 
             this.ShotsFired++;
@@ -100,7 +109,24 @@ namespace TizzleTazzle {
         private PointF GetProjectedFoeLocation(int turns) {
             if (!this.LastFoeState.HasValue) return PointF.Empty;
 
-            return this.LastFoeState.Value.GetProjectedLocation(turns);
+            var velocity = this.LastFoeState.Value.Velocity;
+            if (velocity > 0 && this.CurrentStrategy == TargetStrategy.PeggedVelocity) velocity = 8;
+
+            return this.LastFoeState.Value.GetProjectedLocation(turns, velocity);
+        }
+
+        public override void OnBulletMissed(BulletMissedEvent evnt) {
+            switch (this.BulletStrategies[evnt.Bullet]) {
+                case TargetStrategy.CurrentVelocity:
+                    this.CurrentStrategy = TargetStrategy.PeggedVelocity;
+                    break;
+
+                case TargetStrategy.PeggedVelocity:
+                    this.CurrentStrategy = TargetStrategy.CurrentVelocity;
+                    break;
+            }
+
+            this.Out.WriteLine("Bullet missed. Switched to {0}", this.CurrentStrategy);
         }
 
         public override void OnScannedRobot(ScannedRobotEvent evnt) {
@@ -136,7 +162,7 @@ namespace TizzleTazzle {
                 graphics.DrawLine(lastShotTargetPen, this.LastShotSource.Value, this.LastShotTarget.Value);
             }
             if (this.AheadPoint.HasValue && this.BehindPoint.HasValue) {
-                graphics.DrawLine(Pens.LightBlue, this.Location, this.BehindPoint.Value);
+                graphics.DrawLine(Pens.MediumPurple, this.Location, this.BehindPoint.Value);
                 graphics.DrawLine(Pens.White, this.Location, this.AheadPoint.Value);
             }
         }
