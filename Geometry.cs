@@ -36,6 +36,12 @@ namespace TizzleTazzle {
             return MakePoint((bounds.Right - bounds.Left) / 2, (bounds.Bottom - bounds.Top) / 2);
         }
 
+        public static double GetDamage(this Bullet bullet) {
+            double damage = bullet.Power * 4;
+            if (bullet.Power > 1) damage += (bullet.Power - 1) * 2;
+            return damage;
+        }
+
         public static PointF MidPointWith(this PointF a, PointF b) {
             return MakePoint((a.X + b.X) / 2, (a.Y + b.Y) / 2);
         }

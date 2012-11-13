@@ -1,6 +1,7 @@
 ﻿using Robocode;
 using System.Drawing;
 using System;
+using System.Reflection;
 
 namespace TizzleTazzle {
     internal abstract class StylishBot : Robot {

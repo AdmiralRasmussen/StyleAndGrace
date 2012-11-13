@@ -6,8 +6,9 @@ using Robocode;
 using System.Drawing;
 
 namespace TizzleTazzle {
-    abstract class GrumpyTortoise : StylishBot {
+    class GrumpyTortoise : StylishBot {
         private BotState? LastSeenFoe = null;
+        private double ExpectedFoeEnergy = double.MinValue;
 
         public override void Run() {
             this.SetAllColors(Color.OliveDrab);
@@ -21,20 +22,33 @@ namespace TizzleTazzle {
                 double radarHeading = this.RadarHeading;
                 this.TurnRadarTo(this.LastSeenFoe.Value.GetProjectedLocation(0));
                 if (this.RadarHeading == RadarHeading) this.Scan();
-                if (this.LastSeenFoe.Value.Age > 7) this.FoeSweepSearch();
 
-                this.MakeRefinedShot();
+                if (this.LastSeenFoe.Value.Age < 3) this.MakeRefinedShot();
+                else this.FoeSweepSearch();
+
+                
             }
         }
 
+        Random rng = new Random();
+        int Direction = 1;
         public override void OnScannedRobot(ScannedRobotEvent evnt) {
             if (this.LastSeenFoe != null) {
-                if (evnt.Energy < this.LastSeenFoe.Value.Energy) {
+                if (evnt.Energy < this.ExpectedFoeEnergy - .001) {
                     // enemy fired
+
+                    this.Ahead(this.Direction * rng.Next(50, 150));
+
+                    this.Direction *= -1;
                 }
             }
 
             this.LastSeenFoe = this.GetFoeState(evnt);
+            this.ExpectedFoeEnergy = evnt.Energy;
+        }
+
+        public override void OnBulletHit(BulletHitEvent evnt) {
+            this.ExpectedFoeEnergy -= evnt.Bullet.GetDamage();
         }
 
         private void MakeRefinedShot() {
