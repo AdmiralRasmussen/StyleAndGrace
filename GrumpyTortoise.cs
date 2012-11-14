@@ -6,7 +6,7 @@ using Robocode;
 using System.Drawing;
 
 namespace TizzleTazzle {
-    class GrumpyTortoise : StylishBot {
+    class GrumpyTortoise : Robot {
         private BotState? LastSeenFoe = null;
         private double ExpectedFoeEnergy = double.MinValue;
 
@@ -25,8 +25,6 @@ namespace TizzleTazzle {
 
                 if (this.LastSeenFoe.Value.Age < 3) this.MakeRefinedShot();
                 else this.FoeSweepSearch();
-
-                
             }
         }
 
@@ -43,7 +41,7 @@ namespace TizzleTazzle {
                 }
             }
 
-            this.LastSeenFoe = this.GetFoeState(evnt);
+            this.LastSeenFoe = new BotState(this, evnt);
             this.ExpectedFoeEnergy = evnt.Energy;
         }
 
@@ -55,14 +53,14 @@ namespace TizzleTazzle {
             const double HEADING_THRESHOLD = 2;
             const double HEADING_ACCURACY = .1;
 
-            PointF currentLocation = this.Location;
+            PointF currentLocation = this.GetLocation();
             double lastHeading;
             PointF target = this.LastSeenFoe.Value.GetProjectedLocation();
             double heading = this.GetHeadingTo(target);
 
             double dist = Geometry.Distance(currentLocation, target);
             double power = 2;
-            double shotSpeed = GetShotSpeed(power);
+            double shotSpeed = Geometry.GetShotSpeed(power);
 
             do {
                 double timeToTarget = dist / shotSpeed;

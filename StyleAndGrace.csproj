@@ -50,7 +50,6 @@
     <Compile Include="TargetPredictors.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShnazzyMarmot.cs" />
-    <Compile Include="StylishBot.cs" />
     <Compile Include="GrumpyTortoise.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

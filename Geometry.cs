@@ -17,6 +17,7 @@ namespace TizzleTazzle {
         }
 
         public static double Clamp(double val, double low, double high) {
+            if (double.IsNaN(val)) return low;
             return Math.Min(Math.Max(val, low), high);
         }
 
@@ -46,10 +47,66 @@ namespace TizzleTazzle {
             return MakePoint((a.X + b.X) / 2, (a.Y + b.Y) / 2);
         }
 
-        public static RectangleF GetRobotBounds(this Robot bot) {
+        public static RectangleF GetArenaBounds(this Robot bot) {
             return new RectangleF(
                 (float)bot.Width / 2, (float)bot.Height / 2,
                 (float)(bot.BattleFieldWidth - bot.Width), (float)(bot.BattleFieldHeight - bot.Height));
+        }
+
+        public static PointF GetLocation(this Robot bot) {
+            return Geometry.MakePoint(bot.X, bot.Y);
+        }
+
+        private static double NormalizeHeading(double a) {
+            while (a > 180) a -= 360;
+            while (a < -180) a += 360;
+            return a;
+        }
+
+        public static double GetShotSpeed(double power) {
+            return 20 - (3 * power); // http://robowiki.net/wiki/Robocode/FAQ
+        }
+
+        public static bool TurnGunTo(this Robot bot, double heading, double headingThreshold = 0) {
+            double turn = NormalizeHeading(heading - bot.GunHeading);
+            if (Math.Abs(turn) > headingThreshold) {
+                bot.TurnGunRight(turn);
+                return turn != 0;
+            } else {
+                return false;
+            }
+        }
+
+        public static bool TurnGunTo(this Robot bot, PointF target, double headingThreshold = 0) {
+            return bot.TurnGunTo(bot.GetHeadingTo(target), headingThreshold);
+        }
+
+        public static double GetHeadingTo(this Robot bot, PointF target) {
+            return Geometry.RadiansToDegrees(Math.Atan2(target.X - bot.X, target.Y - bot.Y));
+        }
+
+        public static bool TurnTo(this Robot bot, double heading) {
+            double turn = NormalizeHeading(heading - bot.Heading);
+            bot.TurnRight(turn);
+            return turn != 0;
+        }
+
+        public static bool TurnRadarTo(this Robot bot, double heading) {
+            double turn = NormalizeHeading(heading - bot.RadarHeading);
+            bot.TurnRadarRight(turn);
+            return turn != 0;
+        }
+
+        public static bool TurnRadarTo(this Robot bot, PointF target) {
+            return bot.TurnRadarTo(bot.GetHeadingTo(target));
+        }
+
+        public static double DistanceTo(this Robot bot, PointF dest) {
+            return Geometry.Distance(bot.GetLocation(), dest);
+        }
+
+        public static double GetDistanceTo(this Robot bot, PointF target) {
+            return Geometry.Distance(bot.GetLocation(), target);
         }
     }
 }

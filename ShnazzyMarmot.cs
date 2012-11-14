@@ -5,7 +5,7 @@ using Robocode;
 using System.Drawing;
 
 namespace TizzleTazzle {
-    class ShnazzyMarmot : StylishBot {
+    class ShnazzyMarmot : Robot {
         class PredictorStats {
 		    public int Misses = 0;
             public int Hits = 0;
@@ -14,7 +14,7 @@ namespace TizzleTazzle {
 	    }
 
         private bool FiredOnLastSighting = true;
-        private BotState? LastFoeState = null;
+        private List<BotState> FoeStates = new List<BotState>();
         private PointF? LastShotTarget = null;
         private PointF? LastShotSource = null;
         private List<PointF> LocationHistory = null;
@@ -25,6 +25,7 @@ namespace TizzleTazzle {
         private Dictionary<ITargetPredictor, PredictorStats> Predictors = new Dictionary<ITargetPredictor, PredictorStats> {
             {new LinearTargetPredictor(),       new PredictorStats()},
             {new FixedVelocityPredictor(8),     new PredictorStats()},
+            {new CircularPredictor(),           new PredictorStats()},
             {new FixedVelocityPredictor(0),     new PredictorStats()},
             {new RandomRadiusPredictor(2),      new PredictorStats()},
             {new FixedVelocityPredictor(4),     new PredictorStats()},
@@ -54,13 +55,13 @@ namespace TizzleTazzle {
         private PointF? AheadPoint = null;
         private PointF? BehindPoint = null;
         private void RunBody() {
-            this.LocationHistory.Add(this.Location);
+            this.LocationHistory.Add(this.GetLocation());
 
             while (this.FiredOnLastSighting) {
                 base.TurnRadarRight(360);
             }
 
-            var bounds = this.GetRobotBounds();
+            var bounds = this.GetArenaBounds();
             int variance = (int)(this.DistanceTo(bounds.GetCenter()) * 0.2);
             this.TurnTo(this.GetHeadingTo(this.LastFoeState.Value.Location) + 90 + rng.Next(-variance, variance + 1));
 
@@ -69,14 +70,18 @@ namespace TizzleTazzle {
             this.Drive();
         }
 
+        private BotState? LastFoeState {
+            get { return this.FoeStates.Cast<BotState?>().LastOrDefault(); }
+        }
+
         private void Drive() {
             const double DRIVE_DISTANCE = 120;
 
-            var bounds = this.GetRobotBounds();
+            var bounds = this.GetArenaBounds();
             PointF center = bounds.GetCenter();
 
-            PointF ahead = Geometry.ShiftBy(this.Location, this.Heading, DRIVE_DISTANCE, bounds);
-            PointF behind = Geometry.ShiftBy(this.Location, this.Heading, -DRIVE_DISTANCE, bounds);
+            PointF ahead = Geometry.ShiftBy(this.GetLocation(), this.Heading, DRIVE_DISTANCE, bounds);
+            PointF behind = Geometry.ShiftBy(this.GetLocation(), this.Heading, -DRIVE_DISTANCE, bounds);
             this.AheadPoint = ahead;
             this.BehindPoint = behind;
 
@@ -101,24 +106,24 @@ namespace TizzleTazzle {
             this.Out.WriteLine("{0} selected.", predictor.GetDescription());
 
             PointF lastTarget;
-            PointF target = predictor.Predict(this.LastFoeState.Value, AIM_TURNS);
+            PointF target = predictor.Predict(this.FoeStates, AIM_TURNS);
             this.TurnGunTo(target);
 
             double dist = this.GetDistanceTo(target);
             double power = GetShotPower(dist);
-            double shotSpeed = GetShotSpeed(power);
+            double shotSpeed = Geometry.GetShotSpeed(power);
 
             int iterations = 0;
             do {
                 int timeToTarget = (int)(dist / shotSpeed) + AIM_TURNS;
 
                 lastTarget = target;
-                target = predictor.Predict(this.LastFoeState.Value, timeToTarget);
+                target = predictor.Predict(this.FoeStates, timeToTarget);
                 dist = this.GetDistanceTo(target);
             } while (Geometry.Distance(target, lastTarget) > TARGET_ACCURACY && ++iterations < 10);
 
             this.LastShotTarget = target;
-            this.LastShotSource = this.Location;
+            this.LastShotSource = this.GetLocation();
             this.TurnGunTo(target);
             if (this.GunHeat > 0) return;
             var bullet = base.FireBullet(power);
@@ -140,7 +145,7 @@ namespace TizzleTazzle {
         }
 
         private static double GetShotPower(double dist) {
-            return Geometry.Clamp(300 / dist, .1, 3);
+            return Geometry.Clamp(500 / dist, .1, 3);
         }
 
         public override void OnBulletMissed(BulletMissedEvent evnt) {
@@ -149,7 +154,7 @@ namespace TizzleTazzle {
         }
 
         public override void OnScannedRobot(ScannedRobotEvent evnt) {
-            this.LastFoeState = this.GetFoeState(evnt);
+            this.FoeStates.Add(new BotState(this, evnt));
             this.FiredOnLastSighting = false;
         }
 
@@ -182,17 +187,17 @@ namespace TizzleTazzle {
         public override void OnPaint(IGraphics graphics) {
             if (this.LastFoeState.HasValue) {
                 foreach (var pair in this.Predictors) {
-                    var predicted = pair.Key.Predict(this.LastFoeState.Value, 0);
-                    graphics.DrawLine(projectedEnemyPen, this.Location, predicted);
+                    var predicted = pair.Key.Predict(this.FoeStates, 0);
+                    graphics.DrawLine(projectedEnemyPen, this.GetLocation(), predicted);
                 }
-                graphics.DrawLine(seenEnemyPen, this.Location, this.LastFoeState.Value.Location);
+                graphics.DrawLine(seenEnemyPen, this.GetLocation(), this.LastFoeState.Value.Location);
             }
             if (this.LastShotTarget.HasValue && this.LastShotSource.HasValue) {
                 graphics.DrawLine(lastShotTargetPen, this.LastShotSource.Value, this.LastShotTarget.Value);
             }
             if (this.AheadPoint.HasValue && this.BehindPoint.HasValue) {
-                graphics.DrawLine(Pens.MediumPurple, this.Location, this.BehindPoint.Value);
-                graphics.DrawLine(Pens.MediumPurple, this.Location, this.AheadPoint.Value);
+                graphics.DrawLine(Pens.MediumPurple, this.GetLocation(), this.BehindPoint.Value);
+                graphics.DrawLine(Pens.MediumPurple, this.GetLocation(), this.AheadPoint.Value);
             }
         }
     }
