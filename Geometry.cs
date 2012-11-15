@@ -57,7 +57,7 @@ namespace TizzleTazzle {
             return Geometry.MakePoint(bot.X, bot.Y);
         }
 
-        private static double NormalizeHeading(double a) {
+        public static double NormalizeHeading(double a) {
             while (a > 180) a -= 360;
             while (a < -180) a += 360;
             return a;

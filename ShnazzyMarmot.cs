@@ -6,6 +6,8 @@ using System.Drawing;
 
 namespace TizzleTazzle {
     class ShnazzyMarmot : Robot {
+        public const string VERSION = "1.0.3"; // reflection to get assembly version fails in arena
+
         class PredictorStats {
 		    public int Misses = 0;
             public int Hits = 0;
@@ -22,17 +24,22 @@ namespace TizzleTazzle {
         private int ShotsHit = 0;
         private Random rng = new Random();
         private Dictionary<Bullet, ITargetPredictor> BulletStrategies = new Dictionary<Bullet, ITargetPredictor>();
-        private Dictionary<ITargetPredictor, PredictorStats> Predictors = new Dictionary<ITargetPredictor, PredictorStats> {
-            {new LinearTargetPredictor(),       new PredictorStats()},
-            {new FixedVelocityPredictor(8),     new PredictorStats()},
-            {new CircularPredictor(),           new PredictorStats()},
-            {new FixedVelocityPredictor(0),     new PredictorStats()},
-            {new RandomRadiusPredictor(2),      new PredictorStats()},
-            {new FixedVelocityPredictor(4),     new PredictorStats()},
-            {new FixedVelocityPredictor(-2),    new PredictorStats()},
-        };
+        private Dictionary<ITargetPredictor, PredictorStats> Predictors;
 
-        public const string VERSION = "1.0.2"; // reflection to get assembly version fails in arena
+        public ShnazzyMarmot() {
+            IList<BotState> reader = this.FoeStates.AsReadOnly();
+
+            this.Predictors = new Dictionary<ITargetPredictor, PredictorStats> {
+                {new LinearTargetPredictor(reader),         new PredictorStats()},
+                {new FixedVelocityPredictor(reader, 8),     new PredictorStats()},
+                {new CircularPredictor(reader, false),      new PredictorStats()},
+                {new FixedVelocityPredictor(reader, 0),     new PredictorStats()},
+                {new RandomRadiusPredictor(reader, 2),      new PredictorStats()},
+                {new FixedVelocityPredictor(reader, 4),     new PredictorStats()},
+                {new FixedVelocityPredictor(reader, -2),    new PredictorStats()},
+            };
+        }
+
         public void ShowVersion() {
             this.Out.WriteLine("Shnazzy Marmot {0}", VERSION);
         }
@@ -106,7 +113,7 @@ namespace TizzleTazzle {
             this.Out.WriteLine("{0} selected.", predictor.GetDescription());
 
             PointF lastTarget;
-            PointF target = predictor.Predict(this.FoeStates, AIM_TURNS);
+            PointF target = predictor.Predict(AIM_TURNS);
             this.TurnGunTo(target);
 
             double dist = this.GetDistanceTo(target);
@@ -118,7 +125,7 @@ namespace TizzleTazzle {
                 int timeToTarget = (int)(dist / shotSpeed) + AIM_TURNS;
 
                 lastTarget = target;
-                target = predictor.Predict(this.FoeStates, timeToTarget);
+                target = predictor.Predict(timeToTarget);
                 dist = this.GetDistanceTo(target);
             } while (Geometry.Distance(target, lastTarget) > TARGET_ACCURACY && ++iterations < 10);
 
@@ -187,7 +194,8 @@ namespace TizzleTazzle {
         public override void OnPaint(IGraphics graphics) {
             if (this.LastFoeState.HasValue) {
                 foreach (var pair in this.Predictors) {
-                    var predicted = pair.Key.Predict(this.FoeStates, 0);
+                    var predictor = pair.Key;
+                    var predicted = predictor.Predict(0, graphics);
                     graphics.DrawLine(projectedEnemyPen, this.GetLocation(), predicted);
                 }
                 graphics.DrawLine(seenEnemyPen, this.GetLocation(), this.LastFoeState.Value.Location);
